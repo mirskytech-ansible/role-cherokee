@@ -1,0 +1,14 @@
+# file: roles/cherokee/tasks/main.yml
+---
+
+  - name: add cherokee ppa
+    sudo: yes
+    apt_repository: repo="ppa:cherokee-webserver" state="present"
+    
+  - name: package install
+    sudo: yes
+    apt: pkg="{{ item }}" state="present" update_cache="yes"
+    with_items:
+      - cherokee
+      - libcherokee-mod-libssl
+  
