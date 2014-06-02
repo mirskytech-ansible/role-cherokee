@@ -4,6 +4,8 @@
   - name: add cherokee ppa
     sudo: yes
     apt_repository: repo="ppa:cherokee-webserver" state="present"
+    register: ppa_add
+    ignore_errors: true
     
   - name: package install
     sudo: yes
@@ -11,4 +13,23 @@
     with_items:
       - cherokee
       - libcherokee-mod-libssl
+    register: apt_install
+    ignore_errors: true
+    when: ppa_add|success
+    
+  - name: install from source code (fallback)
+    copy: src=../files/webserver-1.2.103.d021376.zip dest=/tmp mode=0644
+    when: apt_install|failure
+    
+  - command: chdir=/tmp tar xvzf /tmp/webserver-1.2.103.d021376.zip
+    when: apt_install|failure
+    
+  - command: chdir=/tmp/webserver-1.2.103.d021376.zip {{ item }}
+    sudo: yes
+    with_items:
+      - ./autogen.sh --prefix=/usr
+      - make
+      - make install
+    when: apt_install|failure
+
   
