@@ -6,18 +6,23 @@
     apt_repository: repo="ppa:cherokee-webserver" state="present"
     register: ppa_add
     ignore_errors: true
-    
+
   - name: package install
     sudo: yes
-    apt: pkg="{{ item }}" state="present" update_cache="yes"
+    apt: "pkg={{ item }} state=present update_cache=yes"
     with_items:
       - cherokee
       - libcherokee-mod-libssl
     register: apt_install
     ignore_errors: true
     when: ppa_add|success
-    
-  - apt: pkg="{{ item }}" state="present"
+
+  - name: remove cherokee ppas
+    sudo: yes
+    apt_repository: "repo=ppa:cherokee-webserver state=absent"
+    when: ppa_add|failed
+
+  - apt: "pkg={{ item }} state=present"
     sudo: yes
     with_items:
       - make
@@ -25,14 +30,14 @@
       - automake
       - unzip
       - gettext
-    when: apt_install|failure
+    when: ppa_add|failed or apt_install|failed
 
   - name: install from source code (fallback)
     copy: src=../files/webserver-1.2.103.d021376.zip dest=/tmp mode=0644
-    when: apt_install|failure
-    
+    when: ppa_add|failed or apt_install|failed
+
   - command: chdir=/tmp tar xvzf /tmp/webserver-1.2.103.d021376.zip
-    when: apt_install|failure
+    when: ppa_add|failed or apt_install|failed
 
   - command: chdir=/tmp/webserver-1.2.103.d021376.zip {{ item }}
     sudo: yes
@@ -40,6 +45,4 @@
       - ./autogen.sh --prefix=/usr --localstatedir=/var --sysconfdir=/etc
       - make
       - make install
-    when: apt_install|failure
-
-  
+    when: ppa_add|failed or apt_install|failed
